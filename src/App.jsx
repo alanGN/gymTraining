@@ -213,8 +213,13 @@ export default function App() {
         }
 
         * { box-sizing: border-box; }
-        html, body, #root { margin: 0; min-height: 100%; }
+        html, body, #root {
+          margin: 0;
+          min-height: 100%;
+          width: 100%;
+        }        
         body {
+          overflow-x: hidden;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
           color: var(--text);
           background:
@@ -224,10 +229,10 @@ export default function App() {
         }
 
         .app-shell {
-          width: min(1400px, 100%);
+          width: 100%;
+          max-width: 1400px;
           margin: 0 auto;
-          padding: 18px;
-        }
+          paddin
 
         .hero,
         .panel,
