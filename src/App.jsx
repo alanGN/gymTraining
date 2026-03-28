@@ -82,25 +82,40 @@ function getDayTotals(day) {
   );
 }
 
-function Bar({ label, value, max, color }) {
-  const percent = max > 0 ? Math.round((value / max) * 100) : 0;
-
+function StatCard({ label, value, accent }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 14 }}>
+    <div className="stat-card" style={{ borderTop: `4px solid ${accent}` }}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+    </div>
+  );
+}
+
+function MacroBar({ label, value, max, color }) {
+  const percent = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="macro-row">
+      <div className="macro-head">
         <span>{label}</span>
         <strong>{value}</strong>
       </div>
-      <div style={{ width: "100%", height: 12, background: "#e5e7eb", borderRadius: 999 }}>
-        <div
-          style={{
-            width: `${Math.min(percent, 100)}%`,
-            height: "100%",
-            background: color,
-            borderRadius: 999,
-            transition: "width 0.3s ease",
-          }}
-        />
+      <div className="macro-track">
+        <div className="macro-fill" style={{ width: `${percent}%`, background: color }} />
+      </div>
+    </div>
+  );
+}
+
+function WeeklyBar({ label, value, max, color }) {
+  const percent = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="weekly-bar">
+      <div className="weekly-bar-head">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+      <div className="weekly-bar-track">
+        <div className="weekly-bar-fill" style={{ width: `${percent}%`, background: color }} />
       </div>
     </div>
   );
@@ -177,224 +192,506 @@ export default function App() {
   const maxProtein = Math.max(...weeklyRows.map((d) => d.protein), proteinTarget, 1);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6", fontFamily: "Arial, sans-serif", color: "#111827" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: 24 }}>
-        <div style={{ background: "white", borderRadius: 24, padding: 24, boxShadow: "0 10px 30px rgba(0,0,0,0.08)", marginBottom: 24 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
-            <span style={badgeStyle}>Definición</span>
-            <span style={badgeStyleSecondary}>3 gym + 3 running</span>
-            <span style={badgeStyleSecondary}>Alta proteína</span>
+    <>
+      <style>{`
+        :root {
+          --bg: #f4f7fb;
+          --card: rgba(255,255,255,0.88);
+          --text: #152033;
+          --muted: #61708a;
+          --line: #dbe3ee;
+          --navy: #163a70;
+          --blue: #3b82f6;
+          --cyan: #14b8a6;
+          --orange: #f59e0b;
+          --green: #22c55e;
+          --red: #ef4444;
+          --shadow: 0 18px 45px rgba(22, 58, 112, 0.10);
+          --radius-xl: 28px;
+          --radius-lg: 20px;
+          --radius-md: 14px;
+        }
+
+        * { box-sizing: border-box; }
+        html, body, #root { margin: 0; min-height: 100%; }
+        body {
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: var(--text);
+          background:
+            radial-gradient(circle at top left, rgba(20,184,166,0.12), transparent 24%),
+            radial-gradient(circle at top right, rgba(59,130,246,0.10), transparent 28%),
+            linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        }
+
+        .app-shell {
+          width: min(1400px, 100%);
+          margin: 0 auto;
+          padding: 18px;
+        }
+
+        .hero,
+        .panel,
+        .content-card,
+        .summary-card,
+        .weekly-card {
+          background: var(--card);
+          backdrop-filter: blur(14px);
+          border: 1px solid rgba(255,255,255,0.7);
+          box-shadow: var(--shadow);
+        }
+
+        .hero {
+          border-radius: var(--radius-xl);
+          padding: 22px;
+          margin-bottom: 20px;
+        }
+
+        .badge-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-bottom: 14px;
+        }
+
+        .badge-primary,
+        .badge-secondary,
+        .day-pill,
+        .day-pill-active {
+          border-radius: 999px;
+          padding: 10px 16px;
+          font-size: 14px;
+          font-weight: 700;
+          border: none;
+        }
+
+        .badge-primary { background: linear-gradient(135deg, var(--navy), var(--blue)); color: white; }
+        .badge-secondary { background: #eef4fb; color: var(--text); border: 1px solid var(--line); }
+
+        .hero h1 {
+          margin: 0;
+          font-size: clamp(2rem, 4vw, 3.6rem);
+          line-height: 1;
+          letter-spacing: -0.03em;
+        }
+
+        .hero p {
+          color: var(--muted);
+          font-size: clamp(1rem, 2vw, 1.2rem);
+          line-height: 1.65;
+          max-width: 920px;
+          margin: 12px 0 0;
+        }
+
+        .stats-grid {
+          margin-top: 20px;
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .stat-card {
+          background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(246,249,253,0.92));
+          border: 1px solid var(--line);
+          border-radius: 22px;
+          padding: 16px;
+        }
+
+        .stat-label { color: var(--muted); font-size: 14px; }
+        .stat-value { margin-top: 8px; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; }
+
+        .main-grid {
+          display: grid;
+          grid-template-columns: 340px minmax(0, 1fr);
+          gap: 20px;
+        }
+
+        .panel,
+        .content-card,
+        .summary-card,
+        .weekly-card {
+          border-radius: var(--radius-xl);
+          padding: 20px;
+        }
+
+        .panel-title,
+        .section-title {
+          margin: 0 0 14px;
+          font-size: 1.8rem;
+          letter-spacing: -0.03em;
+        }
+
+        .input-block { margin-bottom: 14px; }
+        .label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 700; color: var(--muted); }
+
+        .input,
+        .select,
+        .meal-input,
+        .meal-text {
+          width: 100%;
+          border: 1px solid var(--line);
+          border-radius: 14px;
+          padding: 12px 14px;
+          font-size: 15px;
+          background: white;
+          color: var(--text);
+          outline: none;
+          transition: 0.2s ease;
+        }
+
+        .input:focus,
+        .select:focus,
+        .meal-input:focus,
+        .meal-text:focus {
+          border-color: var(--blue);
+          box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+        }
+
+        .quick-card {
+          margin-top: 18px;
+          background: linear-gradient(135deg, var(--navy), #244c8a);
+          color: white;
+          border-radius: 20px;
+          padding: 16px;
+        }
+
+        .quick-card small { opacity: 0.8; }
+        .quick-card strong { color: #c7f9f1; }
+
+        .reset-btn {
+          width: 100%;
+          margin-top: 16px;
+          border: none;
+          border-radius: 16px;
+          background: linear-gradient(135deg, var(--cyan), var(--blue));
+          color: white;
+          font-weight: 800;
+          padding: 14px;
+          cursor: pointer;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .reset-btn:hover { transform: translateY(-1px); opacity: 0.96; }
+
+        .content-stack { display: grid; gap: 20px; }
+
+        .day-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .day-pill,
+        .day-pill-active {
+          cursor: pointer;
+          transition: 0.18s ease;
+        }
+
+        .day-pill {
+          background: white;
+          color: var(--text);
+          border: 1px solid var(--line);
+        }
+
+        .day-pill:hover { transform: translateY(-1px); border-color: var(--blue); }
+        .day-pill-active { background: linear-gradient(135deg, var(--navy), var(--blue)); color: white; }
+
+        .day-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1.2fr) 320px;
+          gap: 20px;
+        }
+
+        .meal-card {
+          border: 1px solid var(--line);
+          background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(244,248,253,0.88));
+          border-radius: 22px;
+          padding: 14px;
+          margin-bottom: 14px;
+        }
+
+        .meal-grid {
+          display: grid;
+          grid-template-columns: 1.4fr repeat(4, minmax(0, 92px));
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .summary-card-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .mini-stat {
+          background: white;
+          border: 1px solid var(--line);
+          border-radius: 18px;
+          padding: 14px;
+        }
+
+        .mini-label { color: var(--muted); font-size: 14px; }
+        .mini-value { font-size: 2rem; font-weight: 800; margin-top: 8px; }
+
+        .macro-row,
+        .weekly-bar { margin-bottom: 14px; }
+        .macro-head,
+        .weekly-bar-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 6px;
+          font-size: 14px;
+        }
+
+        .macro-track,
+        .weekly-bar-track {
+          width: 100%;
+          height: 14px;
+          border-radius: 999px;
+          background: #eaf0f7;
+          overflow: hidden;
+        }
+
+        .macro-fill,
+        .weekly-bar-fill {
+          height: 100%;
+          border-radius: 999px;
+          transition: width 0.28s ease;
+        }
+
+        .weekly-grid {
+          display: grid;
+          gap: 14px;
+        }
+
+        .weekly-row {
+          display: grid;
+          grid-template-columns: 180px 1fr 1fr;
+          gap: 14px;
+          align-items: center;
+        }
+
+        .weekly-label {
+          font-weight: 800;
+          color: var(--text);
+        }
+
+        .helper-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 20px;
+        }
+
+        .helper-card {
+          border-radius: 22px;
+          padding: 18px;
+          border: 1px solid var(--line);
+          background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,249,253,0.9));
+        }
+
+        .helper-card h4 { margin: 0 0 8px; font-size: 1.05rem; }
+        .helper-card p { margin: 0; color: var(--muted); line-height: 1.55; }
+
+        @media (max-width: 1100px) {
+          .main-grid,
+          .day-layout {
+            grid-template-columns: 1fr;
+          }
+
+          .stats-grid,
+          .helper-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .weekly-row {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .app-shell { padding: 12px; }
+          .hero,
+          .panel,
+          .content-card,
+          .summary-card,
+          .weekly-card { padding: 16px; border-radius: 22px; }
+          .stats-grid,
+          .helper-grid,
+          .summary-card-grid { grid-template-columns: 1fr; }
+          .meal-grid { grid-template-columns: 1fr 1fr; }
+          .mini-value { font-size: 1.7rem; }
+          .hero p { font-size: 1rem; }
+        }
+
+        @media (max-width: 520px) {
+          .hero h1 { line-height: 1.05; }
+          .meal-grid { grid-template-columns: 1fr; }
+          .day-row { display: grid; grid-template-columns: 1fr 1fr; }
+          .day-pill,
+          .day-pill-active { width: 100%; text-align: center; }
+        }
+      `}</style>
+
+      <div className="app-shell">
+        <section className="hero">
+          <div className="badge-row">
+            <span className="badge-primary">Definición</span>
+            <span className="badge-secondary">3 gym + 3 running</span>
+            <span className="badge-secondary">Alta proteína</span>
           </div>
-          <h1 style={{ margin: 0, fontSize: 42 }}>Plan semanal interactivo</h1>
-          <p style={{ color: "#4b5563", maxWidth: 900, lineHeight: 1.6 }}>
-            Web sencilla y desplegable en GitHub Pages. Pensada para perder grasa manteniendo músculo: proteína alta, desayuno realista con tu bocata y yogur, cena ligera con yogur + caseína cuando toque y una cheat meal controlada.
+
+          <h1>Plan semanal interactivo</h1>
+          <p>
+            Visual, limpio y fácil de tocar desde móvil o escritorio. Está pensado para perder grasa manteniendo músculo,
+            con proteína alta, desayuno realista, cena ligera con yogur + caseína cuando toque y una cheat meal controlada.
           </p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginTop: 20 }}>
-            <div style={statCard}><div style={statLabel}>Kcal medias</div><div style={statValue}>{weeklyAverage.kcal}</div></div>
-            <div style={statCard}><div style={statLabel}>Proteína objetivo</div><div style={statValue}>{proteinTarget}g</div></div>
-            <div style={statCard}><div style={statLabel}>Proteína media</div><div style={statValue}>{weeklyAverage.protein}g</div></div>
-            <div style={statCard}><div style={statLabel}>Cobertura</div><div style={statValue}>{proteinCoverage}%</div></div>
+          <div className="stats-grid">
+            <StatCard label="Kcal medias" value={weeklyAverage.kcal} accent="#3b82f6" />
+            <StatCard label="Proteína objetivo" value={`${proteinTarget}g`} accent="#14b8a6" />
+            <StatCard label="Proteína media" value={`${weeklyAverage.protein}g`} accent="#22c55e" />
+            <StatCard label="Cobertura" value={`${proteinCoverage}%`} accent="#f59e0b" />
           </div>
-        </div>
+        </section>
 
-        <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 24 }}>
-          <div style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.08)", alignSelf: "start" }}>
-            <h2 style={{ marginTop: 0 }}>Panel de control</h2>
+        <div className="main-grid">
+          <aside className="panel">
+            <h2 className="panel-title">Panel de control</h2>
 
-            <label style={labelStyle}>Peso (kg)</label>
-            <input style={inputStyle} type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value || 0))} />
-
-            <label style={labelStyle}>Proteína por kg</label>
-            <input style={inputStyle} type="number" step="0.1" min="1.6" max="2.5" value={proteinRatio} onChange={(e) => setProteinRatio(Number(e.target.value || 0))} />
-
-            <label style={labelStyle}>Modo</label>
-            <select style={inputStyle} value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option>Definición agresiva</option>
-              <option>Recomposición</option>
-              <option>Mantenimiento</option>
-            </select>
-
-            <label style={labelStyle}>Tipo de yogur</label>
-            <select style={inputStyle} value={yogurtType} onChange={(e) => setYogurtType(e.target.value)}>
-              <option>PRO+</option>
-              <option>Pastoret 0%</option>
-            </select>
-
-            <label style={labelStyle}>Yogur desayuno (g)</label>
-            <input style={inputStyle} type="number" value={breakfastYogurt} onChange={(e) => setBreakfastYogurt(Number(e.target.value || 0))} />
-
-            <label style={labelStyle}>Yogur noche (g)</label>
-            <input style={inputStyle} type="number" value={nightYogurt} onChange={(e) => setNightYogurt(Number(e.target.value || 0))} />
-
-            <label style={labelStyle}>Caseína noche (g)</label>
-            <input style={inputStyle} type="number" value={caseinNight} onChange={(e) => setCaseinNight(Number(e.target.value || 0))} />
-
-            <div style={{ marginTop: 20, padding: 16, background: "#111827", color: "white", borderRadius: 18 }}>
-              <div style={{ marginBottom: 10, fontSize: 14, opacity: 0.85 }}>Cálculos rápidos</div>
-              <div style={{ marginBottom: 8 }}>Desayuno: <strong>{breakfastProtein}g proteína</strong></div>
-              <div>Cena yogur + caseína: <strong>{nightProtein}g proteína</strong></div>
+            <div className="input-block">
+              <label className="label">Peso (kg)</label>
+              <input className="input" type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value || 0))} />
             </div>
 
-            <button style={buttonSecondary} onClick={resetPlan}>Reset plan</button>
-          </div>
-
-          <div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
-              {Object.entries(plan).map(([key, day]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedDay(key)}
-                  style={selectedDay === key ? tabActiveStyle : tabStyle}
-                >
-                  {day.label}
-                </button>
-              ))}
+            <div className="input-block">
+              <label className="label">Proteína por kg</label>
+              <input className="input" type="number" step="0.1" min="1.6" max="2.5" value={proteinRatio} onChange={(e) => setProteinRatio(Number(e.target.value || 0))} />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 24 }}>
-              <div style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
-                <h2 style={{ marginTop: 0 }}>{selected.label}</h2>
+            <div className="input-block">
+              <label className="label">Modo</label>
+              <select className="select" value={mode} onChange={(e) => setMode(e.target.value)}>
+                <option>Definición agresiva</option>
+                <option>Recomposición</option>
+                <option>Mantenimiento</option>
+              </select>
+            </div>
+
+            <div className="input-block">
+              <label className="label">Tipo de yogur</label>
+              <select className="select" value={yogurtType} onChange={(e) => setYogurtType(e.target.value)}>
+                <option>PRO+</option>
+                <option>Pastoret 0%</option>
+              </select>
+            </div>
+
+            <div className="input-block">
+              <label className="label">Yogur desayuno (g)</label>
+              <input className="input" type="number" value={breakfastYogurt} onChange={(e) => setBreakfastYogurt(Number(e.target.value || 0))} />
+            </div>
+
+            <div className="input-block">
+              <label className="label">Yogur noche (g)</label>
+              <input className="input" type="number" value={nightYogurt} onChange={(e) => setNightYogurt(Number(e.target.value || 0))} />
+            </div>
+
+            <div className="input-block">
+              <label className="label">Caseína noche (g)</label>
+              <input className="input" type="number" value={caseinNight} onChange={(e) => setCaseinNight(Number(e.target.value || 0))} />
+            </div>
+
+            <div className="quick-card">
+              <small>Cálculos rápidos</small>
+              <div style={{ marginTop: 10 }}>Desayuno estimado: <strong>{breakfastProtein}g proteína</strong></div>
+              <div style={{ marginTop: 8 }}>Cena yogur + caseína: <strong>{nightProtein}g proteína</strong></div>
+            </div>
+
+            <button className="reset-btn" onClick={resetPlan}>Reset plan</button>
+          </aside>
+
+          <main className="content-stack">
+            <section className="content-card">
+              <div className="day-row">
+                {Object.entries(plan).map(([key, day]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedDay(key)}
+                    className={selectedDay === key ? "day-pill-active" : "day-pill"}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="day-layout">
+              <div className="content-card">
+                <h2 className="section-title">{selected.label}</h2>
                 {selected.meals.map((meal, index) => (
-                  <div key={`${meal.name}-${index}`} style={{ border: "1px solid #e5e7eb", borderRadius: 18, padding: 14, marginBottom: 14 }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1.4fr repeat(4, 90px)", gap: 10, marginBottom: 10 }}>
-                      <input style={inputStyle} value={meal.name} onChange={(e) => updateMeal(selectedDay, index, "name", e.target.value)} />
-                      <input style={inputStyle} type="number" value={meal.kcal} onChange={(e) => updateMeal(selectedDay, index, "kcal", e.target.value)} />
-                      <input style={inputStyle} type="number" value={meal.protein} onChange={(e) => updateMeal(selectedDay, index, "protein", e.target.value)} />
-                      <input style={inputStyle} type="number" value={meal.carbs} onChange={(e) => updateMeal(selectedDay, index, "carbs", e.target.value)} />
-                      <input style={inputStyle} type="number" value={meal.fat} onChange={(e) => updateMeal(selectedDay, index, "fat", e.target.value)} />
+                  <div key={`${meal.name}-${index}`} className="meal-card">
+                    <div className="meal-grid">
+                      <input className="meal-input" value={meal.name} onChange={(e) => updateMeal(selectedDay, index, "name", e.target.value)} />
+                      <input className="meal-input" type="number" value={meal.kcal} onChange={(e) => updateMeal(selectedDay, index, "kcal", e.target.value)} />
+                      <input className="meal-input" type="number" value={meal.protein} onChange={(e) => updateMeal(selectedDay, index, "protein", e.target.value)} />
+                      <input className="meal-input" type="number" value={meal.carbs} onChange={(e) => updateMeal(selectedDay, index, "carbs", e.target.value)} />
+                      <input className="meal-input" type="number" value={meal.fat} onChange={(e) => updateMeal(selectedDay, index, "fat", e.target.value)} />
                     </div>
-                    <input style={inputStyle} value={meal.foods} onChange={(e) => updateMeal(selectedDay, index, "foods", e.target.value)} />
+                    <input className="meal-text" value={meal.foods} onChange={(e) => updateMeal(selectedDay, index, "foods", e.target.value)} />
                   </div>
                 ))}
               </div>
 
-              <div style={{ display: "grid", gap: 24 }}>
-                <div style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
-                  <h3 style={{ marginTop: 0 }}>Resumen del día</h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <div style={miniCard}><div style={statLabel}>Kcal</div><div style={miniValue}>{selectedTotals.kcal}</div></div>
-                    <div style={miniCard}><div style={statLabel}>Proteína</div><div style={miniValue}>{selectedTotals.protein}g</div></div>
-                    <div style={miniCard}><div style={statLabel}>Carbs</div><div style={miniValue}>{selectedTotals.carbs}g</div></div>
-                    <div style={miniCard}><div style={statLabel}>Grasas</div><div style={miniValue}>{selectedTotals.fat}g</div></div>
+              <div className="content-stack">
+                <section className="summary-card">
+                  <h2 className="section-title">Resumen del día</h2>
+                  <div className="summary-card-grid">
+                    <div className="mini-stat"><div className="mini-label">Kcal</div><div className="mini-value">{selectedTotals.kcal}</div></div>
+                    <div className="mini-stat"><div className="mini-label">Proteína</div><div className="mini-value">{selectedTotals.protein}g</div></div>
+                    <div className="mini-stat"><div className="mini-label">Carbs</div><div className="mini-value">{selectedTotals.carbs}g</div></div>
+                    <div className="mini-stat"><div className="mini-label">Grasas</div><div className="mini-value">{selectedTotals.fat}g</div></div>
                   </div>
-                </div>
+                </section>
 
-                <div style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.08)" }}>
-                  <h3 style={{ marginTop: 0 }}>Macros del día</h3>
-                  <Bar label="Proteína (g)" value={selectedTotals.protein} max={220} color="#111827" />
-                  <Bar label="Carbs (g)" value={selectedTotals.carbs} max={220} color="#2563eb" />
-                  <Bar label="Grasas (g)" value={selectedTotals.fat} max={100} color="#d97706" />
-                </div>
+                <section className="summary-card">
+                  <h2 className="section-title">Macros del día</h2>
+                  <MacroBar label="Proteína (g)" value={selectedTotals.protein} max={220} color="#22c55e" />
+                  <MacroBar label="Carbs (g)" value={selectedTotals.carbs} max={220} color="#3b82f6" />
+                  <MacroBar label="Grasas (g)" value={selectedTotals.fat} max={100} color="#f59e0b" />
+                </section>
               </div>
-            </div>
+            </section>
 
-            <div style={{ background: "white", borderRadius: 24, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.08)", marginTop: 24 }}>
-              <h2 style={{ marginTop: 0 }}>Semana completa</h2>
-              {weeklyRows.map((day) => (
-                <div key={day.key} style={{ display: "grid", gridTemplateColumns: "180px 1fr 1fr", gap: 14, alignItems: "center", marginBottom: 16 }}>
-                  <strong>{day.label}</strong>
-                  <Bar label="Kcal" value={day.kcal} max={maxKcal} color="#111827" />
-                  <Bar label="Proteína" value={day.protein} max={maxProtein} color="#16a34a" />
-                </div>
-              ))}
-            </div>
-          </div>
+            <section className="weekly-card">
+              <h2 className="section-title">Semana completa</h2>
+              <div className="weekly-grid">
+                {weeklyRows.map((day) => (
+                  <div key={day.key} className="weekly-row">
+                    <div className="weekly-label">{day.label}</div>
+                    <WeeklyBar label="Kcal" value={day.kcal} max={maxKcal} color="#3b82f6" />
+                    <WeeklyBar label="Proteína" value={day.protein} max={maxProtein} color="#22c55e" />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="helper-grid">
+              <div className="helper-card">
+                <h4>Desayuno fácil</h4>
+                <p>30g de pan + jamón o pavo + 200–250g de PRO+ te deja un desayuno muy sólido y fácil de repetir.</p>
+              </div>
+              <div className="helper-card">
+                <h4>Cena ligera</h4>
+                <p>250g de yogur + 30g de caseína encaja genial. La espelta solo cuando realmente te sume.</p>
+              </div>
+              <div className="helper-card">
+                <h4>Running con cabeza</h4>
+                <p>Sube carbs en series y tirada larga. El resto de días, prioriza proteína alta y control.</p>
+              </div>
+            </section>
+          </main>
         </div>
       </div>
-    </div>
+    </>
   );
 }
-
-const badgeStyle = {
-  display: "inline-block",
-  background: "#111827",
-  color: "white",
-  padding: "8px 14px",
-  borderRadius: 999,
-  fontSize: 14,
-};
-
-const badgeStyleSecondary = {
-  display: "inline-block",
-  background: "#f3f4f6",
-  color: "#111827",
-  padding: "8px 14px",
-  borderRadius: 999,
-  fontSize: 14,
-  border: "1px solid #e5e7eb",
-};
-
-const statCard = {
-  background: "#f9fafb",
-  borderRadius: 18,
-  padding: 16,
-};
-
-const statLabel = {
-  fontSize: 14,
-  color: "#6b7280",
-};
-
-const statValue = {
-  fontSize: 30,
-  fontWeight: 700,
-  marginTop: 6,
-};
-
-const miniCard = {
-  background: "#f9fafb",
-  borderRadius: 18,
-  padding: 14,
-};
-
-const miniValue = {
-  fontSize: 26,
-  fontWeight: 700,
-  marginTop: 6,
-};
-
-const labelStyle = {
-  display: "block",
-  fontSize: 14,
-  color: "#374151",
-  marginBottom: 6,
-  marginTop: 14,
-};
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "10px 12px",
-  borderRadius: 12,
-  border: "1px solid #d1d5db",
-  fontSize: 14,
-};
-
-const buttonSecondary = {
-  width: "100%",
-  marginTop: 16,
-  padding: "12px 14px",
-  background: "white",
-  border: "1px solid #d1d5db",
-  borderRadius: 14,
-  cursor: "pointer",
-  fontWeight: 600,
-};
-
-const tabStyle = {
-  padding: "10px 14px",
-  background: "white",
-  border: "1px solid #d1d5db",
-  borderRadius: 999,
-  cursor: "pointer",
-};
-
-const tabActiveStyle = {
-  padding: "10px 14px",
-  background: "#111827",
-  color: "white",
-  border: "1px solid #111827",
-  borderRadius: 999,
-  cursor: "pointer",
-};
